@@ -1,0 +1,148 @@
+They want to know whether you understand:
+
+why JWT exists
+where it is used
+complete authentication flow
+security problems
+real production usage
+
+
+Your goal is:
+
+Explain problem
+Explain flow
+Explain where you used it
+Mention security + microservices
+Stop
+
+That’s it.
+
+Most candidates fail because they sound like documentation.
+
+Best Interview Flow (2–3 Minutes)
+
+Say this naturally:
+
+=====================================
+
+“JWT is used for stateless authentication.
+
+In traditional session authentication, server stores session data in memory or database.
+But in microservices or distributed systems, maintaining sessions across multiple servers becomes difficult.
+
+So we use JWT where authentication data is stored inside a signed token instead of server session.”
+
+==========================
+Then explain flow.
+====================
+
+JWT Flow (Main Part)
+
+“First user sends login request with email and password.
+
+Spring Security validates credentials using AuthenticationManager and UserDetailsService.
+
+If credentials are correct, server generates JWT token containing claims like userId and role.
+
+Then token is sent back to client.
+
+For every API request, client sends token in Authorization header using Bearer token.
+
+A JWT filter, usually OncePerRequestFilter, intercepts request, validates token signature and expiry.
+
+If token is valid, authentication is stored inside SecurityContextHolder and request becomes authenticated.”
+
+===============================
+Then mention security.
+===============================
+
+Security Part
+
+“JWT payload is only encoded, not encrypted, so sensitive data should never be stored inside token.
+
+In production we use:
+
+short expiry
+HTTPS
+HttpOnly cookies
+refresh token mechanism”
+=======================
+Then mention real-world usage.
+============================
+
+Microservice Usage
+
+“In microservices architecture, JWT is useful because all services can validate token independently without maintaining shared sessions.”
+=========================
+Then stop.
+
+Do not keep talking unnecessarily.
+
+If Interviewer Asks “Did You Implement It?”
+
+Say this:
+
+“Yes, I implemented JWT authentication using Spring Security.
+
+I created:
+
+JwtService for token generation and validation
+OncePerRequestFilter for intercepting requests
+Security configuration for protected APIs
+Refresh token flow for token renewal
+
+I also handled role-based authorization using roles inside JWT claims.”
+=========================================
+IMPORTANT
+
+Avoid beginner mistakes like:
+
+❌ “JWT is more secure than session”
+
+Wrong.
+
+JWT is not automatically more secure.
+
+Correct answer:
+
+“JWT improves scalability and statelessness.”
+
+❌ “JWT payload is encrypted”
+
+Wrong.
+
+It is Base64 encoded.
+
+Huge difference.
+
+❌ “JWT stores password”
+
+Disaster answer.
+
+Never say that.
+
+If They Ask “Why Bearer?”
+
+Say:
+
+“Bearer means whoever possesses the token can access APIs, so token must be protected properly using HTTPS and secure storage.”
+
+If They Ask “Why Refresh Token?”
+
+Say:
+
+“Access token expiry is kept short for security.
+Refresh token helps generate new access token without forcing user to login repeatedly.”
+
+===================================================================================
+Short Senior-Level Version
+
+Memorize this.
+
+“JWT is a stateless authentication mechanism.
+
+After successful login, server generates signed token containing user claims. Client sends token with every request using Authorization header.
+
+Spring Security validates token through JWT filter and sets authentication in SecurityContextHolder.
+
+JWT is mainly useful in scalable and microservice architectures because server doesn’t maintain session state.”
