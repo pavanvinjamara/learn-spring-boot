@@ -1,0 +1,124 @@
+Cache in SpringBoot
+
+-> why cache exits
+-> where cache fits in architecture
+-> Cache lifecycle
+-> Problems cache solves 
+-> cache consistency issues 
+-> Real production usage
+
+1. Problem
+  -> In microservices or large-scale applications, repeatedly hitting the database for the same data
+     increases latency and database load.
+  -> To reduce response time and improive scalability, we use caching.
+
+2. what cache actually does 
+  -> Cache store frequently accessed data temporarily in memory so future request can 
+     be served without querying the database again.
+
+3. Request flow
+   ->   Client Request --> Controller --> Service Layer --> Check Cache 
+                                         Return Data <--  Hit <--||--> Miss -> DB Call --> Save In Cache -->  return Response
+   -> On the first request, data comes from the database and gets stored in cache.
+      Subsequent requests directly return from cache, which reduces DB calls.
+
+4. Spring Bot Cache Flow
+    -> Step 1:- Enable Cache 
+
+       @EnableCaching
+        @SpringBootApplication
+        public class App {
+        }
+
+       Write @EnableChaching on top of @SpringBootApplication
+       This activates Spring's cache management mechanism.
+
+
+    -> Step 2:- Use @Cacheable
+
+       @Cacheable(value = "users", Id="")
+       public User getUser(Long id) {
+            return userRepository.findById(id).orElseThrow();
+       }
+       Before executing the method, Spring checks whether data with key id exists in cache.
+       If present, method execution is skipped and cached data is returned.
+       Otherwise, Spring executes the method, stores result in cache, and returns response.
+
+5. Cache Key
+   -> Every cached entry is stored using a unique cache key.
+   -> Wrong cache key design can cause stale data or duplicate cache entries.
+
+6. Cache Eviction
+   -> Caching improves performance, but stale data becomes a major challenge.
+   -> So whenever data changes, cache must be updated or removed.
+
+      @CacheEvict(value="", id="")
+      public void deleteUser(Long id){
+        repository.deleteById(id);
+      }
+   -> When user data changes or gets deleted, corresponding cache 
+      entry must be remoed to maintain consistency.
+
+7. @CachePut
+    -> @CachePut always executes the method and update cache with latest value.
+      Unlike @Cacheable, it does not skip method execution.
+
+     @CachePut(value = "", key = "")
+     public User update(User user){
+         return repository.save(user);
+      }
+
+8. Type of Cache
+    -> Local Cache
+        ex: - 1) ConcurrentHashMap
+              2) Caffeine
+      Stored inside application memory. Fast but no shared across microservice instances.
+
+    -> Distributed Cache 
+       ex:- 1) redis 
+            2) Hazelcast
+        In microservices, distributed cache like redis is preferred because all service instances
+        share the same cache.
+
+9. Why Redis is popular
+   Redis is widely used because it is in-memory, extremely fast, supports TTL, distributed caching, pub-sub, and persistence.
+
+10. TTL
+    TTL = Time TO Live
+    Cache should expire after some duration to avoid stale data.
+
+11. Real Project Usage 
+    -> In my project, we cached frequently accessed master data like user profile,
+       configuration data, and dashboard statistics using Redis.
+       This reduced repeated DB queries and improved API response time significantly.
+
+12. Problems in caching
+    -> Common Challenges
+       
+        Cache Stampede
+        Multiple requests hit DB when cache expires simultaneously.
+
+        Stale Data
+        Cache contains old data after DB update.
+
+        Memory Overflow 
+        Too much caching can increase memory usage.
+
+        Cache Synchronization
+        Multiple microservice instances may hold inconsistent cache.
+
+13. When not to use cache
+
+    Highly dynamic or constantly changing data is usually not good for caching because cache invalidation
+    overhead becomes high.
+
+
+
+Short answer 
+“Caching is used to reduce database load and improve API response time by storing frequently accessed data temporarily in memory.
+In Spring Boot, we enable caching using @EnableCaching and cache method results using @Cacheable.
+When a request comes, Spring first checks cache. If data exists, it returns directly without executing the method. Otherwise it fetches from DB and stores result in cache.
+For consistency, we use @CacheEvict to remove stale cache and @CachePut to update cache.
+In microservices, Redis is commonly used as distributed cache because multiple instances can share cached data.”
+    
+  
