@@ -1,0 +1,120 @@
+I've worked mostly with java 17 in spring boot appliaction mainly for better performance, cleaner code,
+and long-term support(LTS).
+
+1) Records - Used for DTOs
+   We used Records for request and response DTOs because they reduce boilerplate code like getters, setters, constructors, equals, and hashCode.
+
+Example:
+public record EmployeeDto(Long id, String name, String department){
+}
+
+2. Switch Expressions
+   We used enhanced switch expressions to make conditional logic cleaner.
+    
+  String role = switch(userType){
+        Case "A" -> "ADMIN";
+        Case "M" -> "MANAGER";
+        default  -> "USER";
+  }
+
+3. Text Blocks
+    Used for writing multi-line Sql queries and Json responses.
+    String query = """ SElECT id, name FROM employee WHERE status = 'ACTIVE' """;
+    @Repository
+    public class EmployeeRepository {
+
+      @Autowired
+      private JdbcTemplate jdbcTemplate;
+  
+      public List<Map<String, Object>> getEmployees() {
+  
+          String sql = """
+                  SELECT id,
+                         name,
+                         department,
+                         salary
+                  FROM employees
+                  WHERE status = 'ACTIVE'
+                  ORDER BY salary DESC
+                  """;
+  
+          return jdbcTemplate.queryForList(sql);
+        }
+    }
+
+4. Pattern Matching of instance of 
+    Before Java 17
+    if(obj instanceof Employee){
+      Employee emp = (Employee) obj;
+    }
+    Java 17
+    if(obj.instanceof Employee emp){
+        System.out.println(emp.getName());
+    }
+
+5. Sealed Classes
+   Used for restricting inheritance in some business validation flows.
+
+    public sealed class Payment permits CardPayment, UpiPayment{}
+
+        public sealed class Payment
+            permits CardPayment, UpiPayment {
+    
+        public void validate() {
+            System.out.println("Validating payment");
+        }
+    }
+
+    public final class CardPayment
+            extends Payment {
+    
+        public void cardDetails() {
+            System.out.println("Card payment processing");
+        }
+    }
+
+    public non-sealed class UpiPayment
+            extends Payment {
+    }
+
+    *-> Here we used final because: No further inheritance allowed
+    
+    Keyword	       Meaning
+    sealed	       Restricts inheritance
+    permits	       Allowed subclasses
+    final          No further extension
+    non-sealed	   Opens inheritance again
+
+6. Stream API Improvements
+   We heavily used Streams for filtering and transforming data.
+   employees. stream().filter(Employee::isActive).map(Employee::getName).toList();
+
+  Before java 17 
+  @Service
+  public class EmployeeService {
+  
+      @Autowired
+      private EmployeeRepository repository;
+  
+      public List<String> getActiveEmployeeNames() {
+  
+          List<Employee> employees = repository.findAll();
+  
+          return employees.stream()
+  
+                  // Filter active employees
+                  .filter(Employee::isActive)
+  
+                  // Convert Employee object to employee name
+                  .map(Employee::getName)
+  
+                  // Convert stream into List
+                  .collect(Collectors.toList());
+      }
+  }
+
+  Java 17
+  return employees.stream()
+        .filter(Employee::isActive)
+        .map(Employee::getName)
+        .toList();
