@@ -1,0 +1,6 @@
+“Kafka is a distributed event streaming platform used for asynchronous communication between microservices.
+Producer services publish events into Kafka topics, and consumer services subscribe and process those events independently.
+Kafka topics are divided into partitions for scalability and parallel processing.
+Consumers track offsets to know processed messages.
+In our project we used Kafka to decouple services like Order, Payment, Notification, and Inventory systems.
+This improved scalability, fault tolerance, and reduced synchronous REST dependency.”
