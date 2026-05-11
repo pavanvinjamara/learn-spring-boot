@@ -1,0 +1,76 @@
+Microservices communicate in two main ways:
+
+1. Synchronous communication (request–response)
+    One service calls another and waits for a response
+    Common methods:
+    REST APIs (HTTP/JSON)
+    gRPC (faster, binary protocol)
+    
+    👉 Example:
+    
+    Order Service → calls → Payment Service → waits for success/failure
+    
+    Say this in interview:
+    
+    “This is simple and intuitive, but it creates tight coupling and can increase latency because services depend on each other’s availability.”
+
+2. Asynchronous communication (event-driven)
+    Services don’t call directly
+    They publish events to a message broker
+    Other services consume events
+    
+    Common tools:
+    
+    Apache Kafka
+    RabbitMQ
+    
+    👉 Example:
+    
+    Order Service → publishes “Order Created”
+    Payment Service listens and processes it
+    Notification Service also listens
+    
+    Say this in interview:
+    
+    “This reduces coupling and improves scalability, but adds complexity like eventual consistency and debugging challenges.”
+
+❌ Problem 1: Service failure
+
+What if Payment Service is down?
+
+      👉 Good answer:
+      
+      Retry mechanism
+      Circuit breaker pattern (fail fast instead of waiting)
+      Fallback responses
+
+❌ Problem 2: Data consistency
+
+  In monolith → one DB
+  In microservices → multiple DBs
+  
+  👉 So how do you maintain consistency?
+
+  Say:
+  
+    Eventual consistency
+    Saga pattern (orchestration/choreography)
+
+❌ Problem 3: Service discovery
+    
+    How does one service even find another?
+    
+    👉 Mention:
+    
+    Service registry (like Eureka)
+    API Gateway
+
+❌ Problem 4: Too many calls (latency mess)
+
+  If Service A → B → C → D, your system becomes slow and fragile.
+  
+  👉 Mention:
+  
+  API Gateway aggregation
+  Caching
+  Avoid chatty communication
