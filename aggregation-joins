@@ -1,0 +1,504 @@
+YES.
+In backend APIs, especially in Spring Boot + Hibernate + SQL, we should try to:
+
+* reduce joins
+* reduce aggregations
+* avoid unnecessary data fetching
+* fetch only needed columns
+
+because database operations are usually the biggest bottleneck.
+
+---
+
+# Why Joins and Aggregations Slow APIs
+
+Database needs:
+
+* CPU
+* memory
+* sorting
+* scanning rows
+* temporary tables
+
+More joins + aggregations = more processing.
+
+---
+
+# 1. JOIN Problem Example
+
+---
+
+# Scenario
+
+Suppose:
+
+## Orders Table
+
+| id | customer_id | amount |
+| -- | ----------- | ------ |
+| 1  | 101         | 500    |
+
+---
+
+## Customers Table
+
+| id  | name  | city |
+| --- | ----- | ---- |
+| 101 | Pavan | Pune |
+
+---
+
+# Bad Query
+
+```sql id="ghzw3s"
+SELECT *
+FROM orders o
+JOIN customers c
+ON o.customer_id = c.id;
+```
+
+---
+
+# Problems
+
+`SELECT *`
+fetches:
+
+* all order columns
+* all customer columns
+
+Even if frontend only needs:
+
+* orderId
+* customerName
+
+Unnecessary data transferred.
+
+---
+
+# Better Query
+
+```sql id="5lcm4j"
+SELECT o.id, c.name
+FROM orders o
+JOIN customers c
+ON o.customer_id = c.id;
+```
+
+Fetch only required columns.
+
+Improves:
+
+* memory
+* network transfer
+* serialization time
+
+---
+
+# Hibernate Best Practice
+
+Instead of:
+
+```java id="g67h9f"
+List<Order> findAll();
+```
+
+Use DTO projection.
+
+---
+
+# DTO Example
+
+```java id="ksjlwm"
+public class OrderResponse {
+
+    private Long orderId;
+    private String customerName;
+
+}
+```
+
+---
+
+# JPQL Projection
+
+```java id="hj2mns"
+@Query("""
+SELECT new com.example.dto.OrderResponse(
+    o.id,
+    c.name
+)
+FROM Order o
+JOIN o.customer c
+""")
+List<OrderResponse> getOrders();
+```
+
+---
+
+# Why Better
+
+Without DTO:
+
+* entire entity loaded
+* lazy loading risk
+* extra memory
+
+With DTO:
+
+* only required data fetched
+
+Very common optimization in production.
+
+---
+
+# 2. Too Many JOINs Problem
+
+---
+
+# Bad Scenario
+
+```sql id="xjlwm6"
+SELECT *
+FROM orders o
+JOIN customers c ON c.id = o.customer_id
+JOIN payments p ON p.order_id = o.id
+JOIN products pr ON pr.id = o.product_id
+JOIN shipping s ON s.order_id = o.id
+JOIN reviews r ON r.product_id = pr.id
+```
+
+---
+
+# Problems
+
+Database must:
+
+* join huge tables
+* create temporary result sets
+* scan many rows
+
+Very slow for large data.
+
+---
+
+# Real Production Fix
+
+Sometimes split into multiple APIs.
+
+Instead of one huge API:
+
+```text id="3aapg4"
+GET /order-details
+```
+
+Use:
+
+* `/orders`
+* `/payments`
+* `/shipping`
+
+Frontend calls separately if needed.
+
+---
+
+# Another Fix → Denormalization
+
+Sometimes we store:
+
+* customer_name
+* product_name
+
+directly in order table.
+
+To avoid joins.
+
+Used in:
+
+* analytics
+* reporting
+* high traffic systems
+
+Tradeoff:
+
+* duplicated data
+* faster reads
+
+---
+
+# 3. Aggregation Problem
+
+Aggregation:
+
+* COUNT
+* SUM
+* AVG
+* GROUP BY
+
+These are expensive on huge tables.
+
+---
+
+# Bad Example
+
+```sql id="yljlwm"
+SELECT customer_id,
+       SUM(amount)
+FROM orders
+GROUP BY customer_id;
+```
+
+For millions of rows:
+
+* full table scan
+* grouping
+* sorting
+
+Heavy query.
+
+---
+
+# Real Scenario
+
+Dashboard API:
+
+```text id="a0hwhv"
+total sales
+monthly revenue
+top customers
+```
+
+If calculated live every request:
+
+* slow API
+* high DB CPU
+
+---
+
+# Better Solutions
+
+---
+
+# Solution 1 → Cache
+
+Store aggregation result in Redis.
+
+Example:
+
+* refresh every 5 mins
+
+Instead of recalculating every request.
+
+---
+
+# Solution 2 → Precomputed Table
+
+Create summary table.
+
+Example:
+
+## sales_summary
+
+| date       | total_sales |
+| ---------- | ----------- |
+| 2026-05-01 | 50000       |
+
+Update periodically using:
+
+* cron jobs
+* Kafka consumers
+* batch jobs
+
+Now query becomes:
+
+```sql id="x8exkh"
+SELECT total_sales
+FROM sales_summary
+WHERE date='2026-05-01';
+```
+
+Very fast.
+
+---
+
+# Solution 3 → Async Processing
+
+Heavy analytics:
+
+* Kafka
+* batch processing
+
+Instead of calculating during API request.
+
+---
+
+# 4. N+1 Query Problem
+
+Very common Hibernate performance issue.
+
+---
+
+# Bad Code
+
+```java id="4nfdm5"
+List<Order> orders = orderRepository.findAll();
+
+for(Order order : orders){
+    System.out.println(order.getCustomer().getName());
+}
+```
+
+If lazy loading:
+
+* 1 query for orders
+* N queries for customers
+
+Total:
+
+```text id="nj2hmh"
+1 + N queries
+```
+
+Very slow.
+
+---
+
+# Fix
+
+Use fetch join.
+
+```java id="qu1zqn"
+@Query("""
+SELECT o
+FROM Order o
+JOIN FETCH o.customer
+""")
+List<Order> getOrders();
+```
+
+---
+
+# 5. Pagination Important
+
+Never fetch huge data.
+
+Bad:
+
+```java id="lm0zln"
+findAll()
+```
+
+Good:
+
+```java id="3dz6f0"
+findAll(pageable)
+```
+
+---
+
+# 6. Indexing
+
+Without index:
+
+```sql id="2jlwmu"
+WHERE email='abc@gmail.com'
+```
+
+DB scans all rows.
+
+---
+
+# Add Index
+
+```sql id="xq4bq3"
+CREATE INDEX idx_email
+ON users(email);
+```
+
+Huge performance improvement.
+
+---
+
+# 7. Avoid SELECT *
+
+Bad:
+
+```sql id="yjlwmk"
+SELECT *
+```
+
+Good:
+
+```sql id="d2snjs"
+SELECT id, name
+```
+
+---
+
+# 8. Use Read-Optimized APIs
+
+Example:
+
+Frontend needs:
+
+* username
+* profile image
+
+Do not return:
+
+* password
+* address
+* audit fields
+* huge nested objects
+
+Use lightweight DTOs.
+
+---
+
+# Real Production Example
+
+---
+
+# Bad API
+
+Order API loads:
+
+* customer
+* payment
+* shipment
+* reviews
+* product images
+
+even when frontend shows only:
+
+* orderId
+* amount
+
+Response:
+
+* huge JSON
+* slow serialization
+* more memory
+
+---
+
+# Optimized API
+
+Create specific DTO:
+
+```java id="x4gljt"
+public class OrderSummaryDto {
+
+    private Long orderId;
+    private Double amount;
+
+}
+```
+
+Fast API.
+
+---
+
+# Interview Explanation
+
+“Yes, reducing joins and aggregations is important for better API performance because joins and group operations increase database processing, memory usage, and query execution time. In production we optimize by using DTO projections, pagination, indexes, caching, precomputed summary tables, fetch joins for N+1 problems, and avoiding unnecessary SELECT * queries. For large datasets we also avoid expensive COUNT and aggregation queries during real-time API execution.”
