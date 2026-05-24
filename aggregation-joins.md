@@ -1,4 +1,4 @@
-YES.
+YES. 
 In backend APIs, especially in Spring Boot + Hibernate + SQL, we should try to:
 
 * reduce joins
